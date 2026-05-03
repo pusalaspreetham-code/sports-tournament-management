@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Tournament Manager</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #0a0a0f; --surface: #111118; --surface2: #1a1a24;
+    --border: #2a2a3a; --accent: #f0c040; --accent2: #e05a2b;
+    --text: #e8e8f0; --muted: #6b6b80; --success: #3ecf8e;
+    --danger: #e05a2b; --radius: 6px;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px; min-height: 100vh; display: flex; }
+  .sidebar { width: 220px; min-height: 100vh; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; position: fixed; top: 0; left: 0; bottom: 0; z-index: 10; }
+  .logo { padding: 28px 20px 20px; border-bottom: 1px solid var(--border); }
+  .logo-title { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 2px; color: var(--accent); line-height: 1; }
+  .logo-sub { font-size: 10px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-top: 4px; }
+  .nav { flex: 1; padding: 12px 0; }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 20px; cursor: pointer; color: var(--muted); font-weight: 500; font-size: 13px; transition: all 0.15s; border-left: 3px solid transparent; user-select: none; }
+  .nav-item:hover { color: var(--text); background: var(--surface2); }
+  .nav-item.active { color: var(--accent); border-left-color: var(--accent); background: rgba(240,192,64,0.06); }
+  .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+  .sidebar-footer { padding: 16px 20px; border-top: 1px solid var(--border); }
+  .user-info { font-size: 11px; color: var(--muted); margin-bottom: 10px; word-break: break-all; }
+  .btn-logout { width: 100%; padding: 8px; background: transparent; border: 1px solid var(--border); border-radius: var(--radius); color: var(--muted); cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; transition: all 0.15s; }
+  .btn-logout:hover { border-color: var(--danger); color: var(--danger); }
+  .main { margin-left: 220px; flex: 1; padding: 32px; min-height: 100vh; }
+  .page { display: none; }
+  .page.active { display: block; animation: fadeIn 0.2s ease; }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
+  .page-header { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 28px; }
+  .page-title { font-family: 'Bebas Neue', sans-serif; font-size: 36px; letter-spacing: 2px; color: var(--text); line-height: 1; }
+  .page-sub { color: var(--muted); font-size: 13px; margin-top: 4px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 20px; }
+  .card-title { font-family: 'Bebas Neue', sans-serif; font-size: 18px; letter-spacing: 1.5px; color: var(--accent); margin-bottom: 16px; }
+  .form-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-group label { font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  input, select { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); padding: 9px 12px; font-family: 'DM Sans', sans-serif; font-size: 13px; outline: none; transition: border-color 0.15s; min-width: 160px; }
+  input:focus, select:focus { border-color: var(--accent); }
+  select option { background: var(--surface2); }
+  .btn { padding: 9px 18px; border: none; border-radius: var(--radius); cursor: pointer; font-family: 'DM Sans', sans-serif; font-weight: 600; font-size: 13px; transition: all 0.15s; white-space: nowrap; }
+  .btn-primary { background: var(--accent); color: #0a0a0f; }
+  .btn-primary:hover { background: #f5d060; }
+  .btn-danger { background: transparent; color: var(--danger); border: 1px solid var(--danger); font-size: 12px; padding: 5px 10px; }
+  .btn-danger:hover { background: var(--danger); color: #fff; }
+  .btn-success { background: var(--success); color: #0a0a0f; }
+  .btn-success:hover { opacity: 0.85; }
+  .btn-sm { padding: 5px 12px; font-size: 12px; }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  th { font-size: 10px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); font-weight: 600; padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border); }
+  td { padding: 11px 14px; border-bottom: 1px solid rgba(42,42,58,0.5); color: var(--text); font-size: 13px; vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+  .mono { font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+  .badge { display: inline-block; padding: 3px 8px; border-radius: 3px; font-size: 11px; font-weight: 600; }
+  .badge-gold  { background: rgba(240,192,64,0.15); color: var(--accent); }
+  .badge-muted { background: rgba(107,107,128,0.15); color: var(--muted); }
+  #toast { position: fixed; bottom: 28px; right: 28px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 18px; font-size: 13px; font-weight: 500; z-index: 9999; transform: translateY(80px); opacity: 0; transition: all 0.3s ease; max-width: 320px; }
+  #toast.show { transform: translateY(0); opacity: 1; }
+  #toast.success { border-color: var(--success); color: var(--success); }
+  #toast.error   { border-color: var(--danger);  color: var(--danger);  }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  .stat-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+  .stat-label { font-size: 10px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+  .stat-value { font-family: 'Bebas Neue', sans-serif; font-size: 38px; color: var(--accent); letter-spacing: 1px; line-height: 1; }
+  .stat-desc  { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .rank-1 { color: #f0c040; font-family: 'Bebas Neue', sans-serif; font-size: 18px; }
+  .rank-2 { color: #9ba3af; font-family: 'Bebas Neue', sans-serif; font-size: 16px; }
+  .rank-3 { color: #c4793a; font-family: 'Bebas Neue', sans-serif; font-size: 16px; }
+  .match-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 8px; gap: 12px; flex-wrap: wrap; }
+  .match-teams { font-weight: 600; font-size: 13px; flex: 1; }
+  .vs { color: var(--muted); font-size: 11px; margin: 0 6px; }
+  .match-actions { display: flex; gap: 8px; align-items: center; }
+  .empty { color: var(--muted); font-size: 13px; padding: 20px 0; text-align: center; }
+  .hint { color: var(--muted); font-size: 12px; margin-bottom: 14px; }
+  @media(max-width:768px) {
+    .sidebar { width: 60px; }
+    .nav-item span, .logo-title, .logo-sub, .sidebar-footer { display: none; }
+    .main { margin-left: 60px; padding: 20px 16px; }
+    .grid-2, .grid-3 { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-title">TourneyPro</div>
+    <div class="logo-sub">Management System</div>
+  </div>
+  <nav class="nav">
+    <div class="nav-item active" onclick="navigate('dashboard')"><span class="nav-icon">⚡</span><span>Dashboard</span></div>
+    <div class="nav-item" onclick="navigate('tournaments')"><span class="nav-icon">🏆</span><span>Tournaments</span></div>
+    <div class="nav-item" onclick="navigate('teams')"><span class="nav-icon">🛡️</span><span>Teams</span></div>
+    <div class="nav-item" onclick="navigate('players')"><span class="nav-icon">👤</span><span>Players</span></div>
+    <div class="nav-item" onclick="navigate('registrations')"><span class="nav-icon">📋</span><span>Registrations</span></div>
+    <div class="nav-item" onclick="navigate('matches')"><span class="nav-icon">⚔️</span><span>Matches</span></div>
+    <div class="nav-item" onclick="navigate('leaderboard')"><span class="nav-icon">📊</span><span>Leaderboard</span></div>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="user-info" id="user-email">—</div>
+    <button class="btn-logout" onclick="logout()">Sign Out</button>
+  </div>
+</aside>
+
+<main class="main">
+
+  <!-- DASHBOARD -->
+  <div id="page-dashboard" class="page active">
+    <div class="page-header"><div>
+      <div class="page-title">Dashboard</div>
+      <div class="page-sub">Your personal tournament overview</div>
+    </div></div>
+    <div class="grid-3" style="margin-bottom:24px;">
+      <div class="stat-box"><div class="stat-label">My Tournaments</div><div class="stat-value" id="stat-tournaments">—</div><div class="stat-desc">Total created</div></div>
+      <div class="stat-box"><div class="stat-label">My Teams</div><div class="stat-value" id="stat-teams">—</div><div class="stat-desc">Teams you manage</div></div>
+      <div class="stat-box"><div class="stat-label">My Matches</div><div class="stat-value" id="stat-matches">—</div><div class="stat-desc">Across my tournaments</div></div>
+    </div>
+    <div class="grid-2">
+      <div class="card"><div class="card-title">My Recent Tournaments</div><div id="dash-tournaments" class="empty">Loading…</div></div>
+      <div class="card"><div class="card-title">My Recent Teams</div><div id="dash-teams" class="empty">Loading…</div></div>
+    </div>
+  </div>
+
+  <!-- TOURNAMENTS -->
+  <div id="page-tournaments" class="page">
+    <div class="page-header"><div>
+      <div class="page-title">Tournaments</div>
+      <div class="page-sub">Create and manage your competitions</div>
+    </div></div>
+    <div class="card">
+      <div class="card-title">Create Tournament</div>
+      <div class="form-row">
+        <div class="form-group"><label>Name</label><input id="t-name" placeholder="e.g. Summer Cup 2025"/></div>
+        <div class="form-group"><label>Start Date</label><input id="t-start" type="date"/></div>
+        <div class="form-group"><label>End Date</label><input id="t-end" type="date"/></div>
+        <button class="btn btn-primary" onclick="createTournament()">+ Create</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">My Tournaments</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>#</th><th>Name</th><th>Start</th><th>End</th></tr></thead>
+          <tbody id="tournaments-tbody"><tr><td colspan="4" class="empty">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- TEAMS -->
+  <div id="page-teams" class="page">
+    <div class="page-header"><div>
+      <div class="page-title">Teams</div>
+      <div class="page-sub">Manage your teams</div>
+    </div></div>
+    <div class="card">
+      <div class="card-title">Add Team</div>
+      <div class="form-row">
+        <div class="form-group"><label>Team Name</label><input id="team-name" placeholder="e.g. Phoenix FC"/></div>
+        <div class="form-group"><label>Coach Name</label><input id="team-coach" placeholder="e.g. John Doe"/></div>
+        <button class="btn btn-primary" onclick="addTeam()">+ Add Team</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">My Teams</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>ID</th><th>Team Name</th><th>Coach</th><th>Players</th><th>Action</th></tr></thead>
+          <tbody id="teams-tbody"><tr><td colspan="5" class="empty">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- PLAYERS -->
+  <div id="page-players" class="page">
+    <div class="page-header"><div>
+      <div class="page-title">Players</div>
+      <div class="page-sub">Add and manage players in your teams</div>
+    </div></div>
+    <div class="card">
+      <div class="card-title">Add Player</div>
+      <div class="form-row">
+        <div class="form-group"><label>Name</label><input id="p-name" placeholder="Player name"/></div>
+        <div class="form-group"><label>Age</label><input id="p-age" type="number" placeholder="Age" style="min-width:80px"/></div>
+        <div class="form-group"><label>Gender</label>
+          <select id="p-gender">
+            <option value="">Select</option>
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Team</label>
+          <select id="p-team"><option value="">Select Team</option></select>
+        </div>
+        <button class="btn btn-primary" onclick="addPlayer()">+ Add Player</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Players by Team</div>
+      <div class="form-row" style="margin-bottom:16px;">
+        <div class="form-group"><label>Select Team</label>
+          <select id="view-team-select" onchange="loadPlayersByTeam()"><option value="">— Select Team —</option></select>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>ID</th><th>Name</th><th>Age</th><th>Gender</th><th>Action</th></tr></thead>
+          <tbody id="players-tbody"><tr><td colspan="5" class="empty">Select a team to view players</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- REGISTRATIONS -->
+  <div id="page-registrations" class="page">
+    <div class="page-header"><div>
+      <div class="page-title">Registrations</div>
+      <div class="page-sub">Register your teams into your tournaments</div>
+    </div></div>
+    <div class="card">
+      <div class="card-title">Register Team</div>
+      <p class="hint">⚠️ Minimum 12 players required per team to register.</p>
+      <div class="form-row">
+        <div class="form-group"><label>Team</label>
+          <select id="reg-team"><option value="">Select Team</option></select>
+        </div>
+        <div class="form-group"><label>Tournament</label>
+          <select id="reg-tournament"><option value="">Select Tournament</option></select>
+        </div>
+        <button class="btn btn-primary" onclick="createRegistration()">Register</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Registered Teams by Tournament</div>
+      <div class="form-row" style="margin-bottom:16px;">
+        <div class="form-group"><label>Tournament</label>
+          <select id="reg-view-tournament" onchange="loadTeamsByTournament()"><option value="">— Select Tournament —</option></select>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Team ID</th><th>Team Name</th></tr></thead>
+          <tbody id="reg-teams-tbody"><tr><td colspan="2" class="empty">Select a tournament</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- MATCHES -->
+  <div id="page-matches" class="page">
+    <div class="page-header"><div>
+      <div class="page-title">Matches</div>
+      <div class="page-sub">Generate and manage your tournament matches</div>
+    </div></div>
+    <div class="card">
+      <div class="card-title">Generate Matches (Round Robin)</div>
+      <div class="form-row">
+        <div class="form-group"><label>Tournament</label>
+          <select id="gen-tournament"><option value="">Select Tournament</option></select>
+        </div>
+        <button class="btn btn-primary" onclick="generateMatches()">⚙️ Generate</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">View &amp; Update Matches</div>
+      <div class="form-row" style="margin-bottom:16px;">
+        <div class="form-group"><label>Tournament</label>
+          <select id="view-match-tournament" onchange="loadMatches()"><option value="">— Select Tournament —</option></select>
+        </div>
+      </div>
+      <div id="matches-list"><div class="empty">Select a tournament to view matches</div></div>
+    </div>
+  </div>
+
+  <!-- LEADERBOARD -->
+  <div id="page-leaderboard" class="page">
+    <div class="page-header"><div>
+      <div class="page-title">Leaderboard</div>
+      <div class="page-sub">Points standings for your tournaments</div>
+    </div></div>
+    <div class="card">
+      <div class="form-row" style="margin-bottom:20px;">
+        <div class="form-group"><label>Select Tournament</label>
+          <select id="lb-tournament" onchange="loadLeaderboard()"><option value="">— Select Tournament —</option></select>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Rank</th><th>Team</th><th>Played</th><th>Wins</th><th>Points</th></tr></thead>
+          <tbody id="lb-tbody"><tr><td colspan="5" class="empty">Select a tournament</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<div id="toast"></div>
+
+<script type="module">
+import { auth } from "./firebase.js";
+import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+// ─── AUTH ─────────────────────────────────────────────────
+let UID = null;
+
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    UID = user.uid;
+    document.getElementById('user-email').textContent = user.email || user.uid;
+    initPage('dashboard');
+  } else {
+    window.location.href = "login.html";
+  }
+});
+
+window.logout = async () => {
+  try { await signOut(auth); window.location.href = "login.html"; }
+  catch { toast('Logout failed', 'error'); }
+};
+
+// ─── API ──────────────────────────────────────────────────
+const BASE = 'http://localhost:5000/api';
+
+async function req(method, url, body) {
+  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  if (body) opts.body = JSON.stringify(body);
+  const res  = await fetch(BASE + url, opts);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || data.error || 'Request failed');
+  return data;
+}
+const get  = url      => req('GET',    url);
+const post = (url, b) => req('POST',   url, b);
+const put  = (url, b) => req('PUT',    url, b);
+const del  = url      => req('DELETE', url);
+
+// ─── UTILS ────────────────────────────────────────────────
+function toast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = `show ${type}`;
+  setTimeout(() => t.className = '', 3500);
+}
+const fmt = d => d ? new Date(d).toLocaleDateString('en-IN') : '—';
+
+// ─── SHORTCUTS ────────────────────────────────────────────
+const myTournaments = () => get(`/user-tournaments/${UID}`).catch(() => []);
+const myTeams       = () => get(`/user-teams/${UID}`).catch(() => []);
+
+// ─── NAVIGATION ───────────────────────────────────────────
+window.navigate = function (page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => {
+    if (n.getAttribute('onclick')?.includes(`'${page}'`)) n.classList.add('active');
+  });
+  if (UID) initPage(page);
+};
+
+async function initPage(page) {
+  if (!UID) return;
+  if (page === 'dashboard')     loadDashboard();
+  if (page === 'tournaments')   loadTournaments();
+  if (page === 'teams')         loadTeams();
+  if (page === 'players')       setupPlayersPage();
+  if (page === 'registrations') setupRegistrationsPage();
+  if (page === 'matches')       setupMatchesPage();
+  if (page === 'leaderboard')   setupLeaderboardPage();
+}
+
+// ─── DASHBOARD ────────────────────────────────────────────
+async function loadDashboard() {
+  const [tournaments, teams] = await Promise.all([myTournaments(), myTeams()]);
+  document.getElementById('stat-tournaments').textContent = tournaments.length;
+  document.getElementById('stat-teams').textContent       = teams.length;
+
+  let totalMatches = 0;
+  if (tournaments.length) {
+    const counts = await Promise.all(
+      tournaments.map(t => get(`/user-matches/${UID}/${t.tournament_id}`).catch(() => []))
+    );
+    counts.forEach(m => totalMatches += Array.isArray(m) ? m.length : 0);
+  }
+  document.getElementById('stat-matches').textContent = totalMatches;
+
+  const dtEl = document.getElementById('dash-tournaments');
+  dtEl.innerHTML = tournaments.length
+    ? [...tournaments].reverse().slice(0, 5).map(t => `
+        <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+          <span style="font-weight:600">${t.name}</span>
+          <span style="color:var(--muted);font-size:12px">${fmt(t.start_date)}</span>
+        </div>`).join('')
+    : '<div class="empty">No tournaments yet</div>';
+
+  const dtTeams = document.getElementById('dash-teams');
+  dtTeams.innerHTML = teams.length
+    ? [...teams].reverse().slice(0, 5).map(t => `
+        <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+          <span style="font-weight:600">${t.team_name}</span>
+          <span style="color:var(--muted);font-size:12px">${t.coach_name || '—'}</span>
+        </div>`).join('')
+    : '<div class="empty">No teams yet</div>';
+}
+
+// ─── TOURNAMENTS ──────────────────────────────────────────
+async function loadTournaments() {
+  const data  = await myTournaments();
+  const tbody = document.getElementById('tournaments-tbody');
+  tbody.innerHTML = data.length
+    ? data.map(t => `<tr>
+        <td class="mono">${t.tournament_id}</td>
+        <td style="font-weight:600">${t.name}</td>
+        <td>${fmt(t.start_date)}</td>
+        <td>${fmt(t.end_date)}</td>
+      </tr>`).join('')
+    : '<tr><td colspan="4" class="empty">No tournaments yet. Create one above!</td></tr>';
+}
+
+window.createTournament = async function () {
+  const name = document.getElementById('t-name').value.trim();
+  const start_date = document.getElementById('t-start').value;
+  const end_date   = document.getElementById('t-end').value;
+  if (!name || !start_date || !end_date) { toast('Fill all fields', 'error'); return; }
+  try {
+    const res = await post('/tournaments', { name, start_date, end_date });
+    await post('/user-tournament', { userId: UID, tournament_id: res.tournament_id });
+    toast('Tournament created!');
+    document.getElementById('t-name').value = '';
+    document.getElementById('t-start').value = '';
+    document.getElementById('t-end').value   = '';
+    loadTournaments();
+  } catch (e) { toast(e.message, 'error'); }
+};
+
+// ─── TEAMS ────────────────────────────────────────────────
+async function loadTeams() {
+  const data  = await myTeams();
+  const tbody = document.getElementById('teams-tbody');
+  if (!data.length) {
+    tbody.innerHTML = '<tr><td colspan="5" class="empty">No teams yet</td></tr>';
+    return;
+  }
+  const playerCounts = await Promise.all(
+    data.map(t => get(`/user-players/${UID}/${t.team_id}`).then(p => p.length).catch(() => 0))
+  );
+  tbody.innerHTML = data.map((t, i) => `
+    <tr>
+      <td class="mono">${t.team_id}</td>
+      <td style="font-weight:600">${t.team_name}</td>
+      <td>${t.coach_name || '—'}</td>
+      <td><span class="badge ${playerCounts[i] >= 12 ? 'badge-gold' : 'badge-muted'}">${playerCounts[i]}/12</span></td>
+      <td><button class="btn btn-danger btn-sm" onclick="deleteTeam(${t.team_id})">Delete</button></td>
+    </tr>`).join('');
+}
+
+window.addTeam = async function () {
+  const team_name  = document.getElementById('team-name').value.trim();
+  const coach_name = document.getElementById('team-coach').value.trim();
+  if (!team_name) { toast('Team name required', 'error'); return; }
+  try {
+    await post('/user-teams', { userId: UID, team_name, coach_name });
+    toast('Team added!');
+    document.getElementById('team-name').value  = '';
+    document.getElementById('team-coach').value = '';
+    loadTeams();
+  } catch (e) { toast(e.message, 'error'); }
+};
+
+window.deleteTeam = async function (id) {
+  if (!confirm('Delete this team?')) return;
+  try {
+    await del(`/user-teams/${UID}/${id}`);
+    toast('Team deleted');
+    loadTeams();
+  } catch (e) { toast(e.message, 'error'); }
+};
+
+// ─── PLAYERS ──────────────────────────────────────────────
+async function setupPlayersPage() {
+  const teams = await myTeams();
+  const opts  = teams.map(t => `<option value="${t.team_id}">${t.team_name}</option>`).join('');
+  document.getElementById('p-team').innerHTML =
+    '<option value="">Select Team</option>' + opts;
+  document.getElementById('view-team-select').innerHTML =
+    '<option value="">— Select Team —</option>' + opts;
+  document.getElementById('players-tbody').innerHTML =
+    '<tr><td colspan="5" class="empty">Select a team to view players</td></tr>';
+}
+
+window.addPlayer = async function () {
+  const name    = document.getElementById('p-name').value.trim();
+  const age     = document.getElementById('p-age').value;
+  const gender  = document.getElementById('p-gender').value;
+  const team_id = document.getElementById('p-team').value;
+  if (!name || !team_id) { toast('Name and team required', 'error'); return; }
+  try {
+    await post('/user-players', { userId: UID, name, age: age || null, gender: gender || null, team_id });
+    toast('Player added!');
+    document.getElementById('p-name').value   = '';
+    document.getElementById('p-age').value    = '';
+    document.getElementById('p-gender').value = '';
+    const sel = document.getElementById('view-team-select');
+    if (sel.value === team_id) loadPlayersByTeam();
+  } catch (e) { toast(e.message, 'error'); }
+};
+
+window.loadPlayersByTeam = async function () {
+  const team_id = document.getElementById('view-team-select').value;
+  const tbody   = document.getElementById('players-tbody');
+  if (!team_id) {
+    tbody.innerHTML = '<tr><td colspan="5" class="empty">Select a team to view players</td></tr>';
+    return;
+  }
+  try {
+    const data = await get(`/user-players/${UID}/${team_id}`);
+    tbody.innerHTML = data.length
+      ? data.map(p => `
+          <tr>
+            <td class="mono">${p.player_id}</td>
+            <td style="font-weight:600">${p.name}</td>
+            <td>${p.age || '—'}</td>
+            <td>${p.gender || '—'}</td>
+            <td><button class="btn btn-danger btn-sm" onclick="deletePlayer(${p.player_id})">Delete</button></td>
+          </tr>`).join('')
+      : '<tr><td colspan="5" class="empty">No players in this team yet</td></tr>';
+  } catch (e) { toast(e.message, 'error'); }
+};
+
+window.deletePlayer = async function (id) {
+  if (!confirm('Delete this player?')) return;
+  try {
+    await del(`/user-players/${UID}/${id}`);
+    toast('Player deleted');
+    loadPlayersByTeam();
+  } catch (e) { toast(e.message, 'error'); }
+};
+
+// ─── REGISTRATIONS ────────────────────────────────────────
+async function setupRegistrationsPage() {
+  const [teams, tournaments] = await Promise.all([myTeams(), myTournaments()]);
+  const teamOpts = teams.map(t => `<option value="${t.team_id}">${t.team_name}</option>`).join('');
+  const tOpts    = tournaments.map(t => `<option value="${t.tournament_id}">${t.name}</option>`).join('');
+  document.getElementById('reg-team').innerHTML =
+    '<option value="">Select Team</option>' + teamOpts;
+  document.getElementById('reg-tournament').innerHTML =
+    '<option value="">Select Tournament</option>' + tOpts;
+  document.getElementById('reg-view-tournament').innerHTML =
+    '<option value="">— Select Tournament —</option>' + tOpts;
+  document.getElementById('reg-teams-tbody').innerHTML =
+    '<tr><td colspan="2" class="empty">Select a tournament</td></tr>';
+}
+
+window.createRegistration = async function () {
+  const team_id       = document.getElementById('reg-team').value;
+  const tournament_id = document.getElementById('reg-tournament').value;
+  if (!team_id || !tournament_id) { toast('Select both team and tournament', 'error'); return; }
+  try {
+    await post('/user-registrations', { userId: UID, team_id, tournament_id });
+    toast('Team registered successfully!');
+    const view = document.getElementById('reg-view-tournament');
+    if (view.value === tournament_id) loadTeamsByTournament();
+  } catch (e) { toast(e.message, 'error'); }
+};
+
+window.loadTeamsByTournament = async function () {
+  const tournament_id = document.getElementById('reg-view-tournament').value;
+  const tbody         = document.getElementById('reg-teams-tbody');
+  if (!tournament_id) {
+    tbody.innerHTML = '<tr><td colspan="2" class="empty">Select a tournament</td></tr>';
+    return;
+  }
+  try {
+    const data = await get(`/user-registrations/${UID}/${tournament_id}`);
+    tbody.innerHTML = data.length
+      ? data.map(t => `<tr><td class="mono">${t.team_id}</td><td style="font-weight:600">${t.team_name}</td></tr>`).join('')
+      : '<tr><td colspan="2" class="empty">No teams registered yet</td></tr>';
+  } catch (e) { toast(e.message, 'error'); }
+};
+
+// ─── MATCHES ──────────────────────────────────────────────
+async function setupMatchesPage() {
+  const tournaments = await myTournaments();
+  const opts = tournaments.map(t => `<option value="${t.tournament_id}">${t.name}</option>`).join('');
+  document.getElementById('gen-tournament').innerHTML =
+    '<option value="">Select Tournament</option>' + opts;
+  document.getElementById('view-match-tournament').innerHTML =
+    '<option value="">— Select Tournament —</option>' + opts;
+  document.getElementById('matches-list').innerHTML =
+    '<div class="empty">Select a tournament to view matches</div>';
+}
+
+window.generateMatches = async function () {
+  const tournament_id = document.getElementById('gen-tournament').value;
+  if (!tournament_id) { toast('Select a tournament', 'error'); return; }
+  try {
+    const res = await post(`/user-matches/generate/${UID}/${tournament_id}`);
+    toast(`✅ Generated ${res.total_matches} matches!`);
+    document.getElementById('view-match-tournament').value = tournament_id;
+    loadMatches();
+  } catch (e) { toast(e.message, 'error'); }
+};
+
+window.loadMatches = async function () {
+  const tournament_id = document.getElementById('view-match-tournament').value;
+  const container     = document.getElementById('matches-list');
+  if (!tournament_id) {
+    container.innerHTML = '<div class="empty">Select a tournament to view matches</div>';
+    return;
+  }
+  try {
+    const [matches, teams] = await Promise.all([
+      get(`/user-matches/${UID}/${tournament_id}`),
+      myTeams()
+    ]);
+    const teamMap = {};
+    teams.forEach(t => teamMap[t.team_id] = t.team_name);
+
+    if (!matches.length) {
+      container.innerHTML = '<div class="empty">No matches yet. Generate matches first.</div>';
+      return;
+    }
+    container.innerHTML = matches.map(m => {
+      const t1 = teamMap[m.team1_id] || `Team ${m.team1_id}`;
+      const t2 = teamMap[m.team2_id] || `Team ${m.team2_id}`;
+      const winnerLabel = m.winner_id
+        ? `<span class="badge badge-gold">🏆 ${teamMap[m.winner_id] || m.winner_id}</span>`
+        : `<span class="badge badge-muted">Pending</span>`;
+      return `
+        <div class="match-row">
+          <div class="match-teams">${t1} <span class="vs">VS</span> ${t2}</div>
+          <div>${winnerLabel}</div>
+          <div class="match-actions">
+            <select id="winner-sel-${m.match_id}" style="min-width:140px">
+              <option value="">Set Winner</option>
+              <option value="${m.team1_id}">${t1}</option>
+              <option value="${m.team2_id}">${t2}</option>
+              <option value="tie">Tie</option>
+            </select>
+            <button class="btn btn-success btn-sm" onclick="setWinner(${m.match_id})">Save</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteMatch(${m.match_id})">✕</button>
+          </div>
+        </div>`;
+    }).join('');
+  } catch (e) { toast(e.message, 'error'); }
+};
+
+window.setWinner = async function (match_id) {
+  const winner_id = document.getElementById(`winner-sel-${match_id}`).value;
+  if (!winner_id) { toast('Select a winner or Tie', 'error'); return; }
+  try {
+    await put(`/user-matches/winner/${UID}/${match_id}`, { winner_id });
+    toast('Winner saved!');
+    loadMatches();
+  } catch (e) { toast(e.message, 'error'); }
+};
+
+window.deleteMatch = async function (match_id) {
+  if (!confirm('Delete this match?')) return;
+  try {
+    await del(`/user-matches/${UID}/${match_id}`);
+    toast('Match deleted');
+    loadMatches();
+  } catch (e) { toast(e.message, 'error'); }
+};
+
+// ─── LEADERBOARD ──────────────────────────────────────────
+async function setupLeaderboardPage() {
+  const tournaments = await myTournaments();
+  document.getElementById('lb-tournament').innerHTML =
+    '<option value="">— Select Tournament —</option>' +
+    tournaments.map(t => `<option value="${t.tournament_id}">${t.name}</option>`).join('');
+  document.getElementById('lb-tbody').innerHTML =
+    '<tr><td colspan="5" class="empty">Select a tournament</td></tr>';
+}
+
+window.loadLeaderboard = async function () {
+  const tournament_id = document.getElementById('lb-tournament').value;
+  const tbody         = document.getElementById('lb-tbody');
+  if (!tournament_id) {
+    tbody.innerHTML = '<tr><td colspan="5" class="empty">Select a tournament</td></tr>';
+    return;
+  }
+  try {
+    const data = await get(`/user-leaderboard/${UID}/${tournament_id}`);
+    tbody.innerHTML = data.length
+      ? data.map((row, i) => {
+          const rank = i === 0 ? `<span class="rank-1">🥇</span>`
+                     : i === 1 ? `<span class="rank-2">🥈</span>`
+                     : i === 2 ? `<span class="rank-3">🥉</span>`
+                     : `<span style="color:var(--muted)">${i + 1}</span>`;
+          return `<tr>
+            <td>${rank}</td>
+            <td style="font-weight:600">${row.team_name}</td>
+            <td class="mono">${row.matches_played}</td>
+            <td class="mono">${row.wins}</td>
+            <td><span class="badge badge-gold">${row.points} pts</span></td>
+          </tr>`;
+        }).join('')
+      : '<tr><td colspan="5" class="empty">No data yet. Complete some matches first.</td></tr>';
+  } catch (e) { toast(e.message, 'error'); }
+};
+</script>
+</body>
+</html>
